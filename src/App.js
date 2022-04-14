@@ -7,14 +7,34 @@ import PostFilter from "./components/PostFilter";
 import MyModal from "./components/UI/MyModal/MyModal";
 import MyButton from "./components/UI/button/MyButton";
 import {usePosts} from "./hooks/usePosts";
-import axios from "axios";
+import PostService from "./API/PostService";
+import Loader from "./components/UI/Loader/Loader";
+import {useFetching} from "./hooks/useFetching";
+import {getPageCount} from "./utils/pages";
 
 function App() {
 
     const [posts, setPosts] = useState([]);
     const [filter, setFilter] = useState({sort: "", query: ""});
     const [modal, setModal] = useState(false);
+    const [totalPages, setTotalPages] = useState(0)
+    const [limit, setLimit] = useState(10)
+    const [page, setPage] = useState(1)
+
     const sortedAndSearchedPosts = usePosts(posts, filter.sort, filter.query);
+    // const [isPostsLoading, setPostsLoading] = useState(false);
+    const [fetchPosts,
+        isPostsLoading,
+        postError] =
+        useFetching(async () => {
+            const response = await PostService.getAll(limit, page);
+            setPosts(response.data);
+            const totalCount = response.headers["x-total-count"]
+            setTotalPages(getPageCount(totalCount, limit));
+        }
+    )
+
+    console.log(totalPages);
 
     useEffect(() => {
         fetchPosts()
@@ -25,10 +45,12 @@ function App() {
         setModal(false)
     }
 
-    async function fetchPosts() {
-        const response = await axios.get("https://jsonplaceholder.typicode.com/posts")
-        setPosts(response.data)
-    }
+    // async function fetchPosts() {
+    //     setPostsLoading(true);
+    //     const posts = await PostService.getAll()
+    //     setPosts(posts)
+    //     setPostsLoading(false);
+    // }
 
     const removePost = (post) => {
         setPosts(posts.filter(p => p.id !== post.id));
@@ -48,8 +70,14 @@ function App() {
                 filter={filter}
                 setFilter={setFilter}
             />
-            <PostList remove={removePost} posts={sortedAndSearchedPosts} title={"Список постов"}/>
+            {postError &&
+                <h1>Произошла ошибка {postError}</h1>
+            }
 
+            {isPostsLoading
+                ? <div style={{display: "flex", justifyContent: "center", marginTop: 50}}><Loader/></div>
+                : <PostList remove={removePost} posts={sortedAndSearchedPosts} title={"Список постов"}/>
+            }
         </div>
     );
 }
