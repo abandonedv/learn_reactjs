@@ -1,10 +1,24 @@
-import React from "react";
-import "./hooks/App.css";
-import {BrowserRouter, Route, Routes} from "react-router-dom";
+import React, {useEffect, useState} from "react";
+import "./styles/App.css";
+import {BrowserRouter, Link, Route, Routes} from "react-router-dom";
 import MyPosts from "./pages/MyPosts";
+import MyButton from "./components/UI/button/MyButton";
+import Navbar from "./components/UI/Navbar/Navbar";
+import AppRouter from "./components/AppRouter";
+import {AuthContext} from "./context";
 
 
 function App() {
+
+    const [isAuth, setIsAuth] = useState(true)
+    const [isLoading, setLoading] = useState(true)
+
+    useEffect(() => {
+        if(localStorage.getItem("auth")) {
+            setIsAuth(true)
+        }
+        setLoading(false);
+    }, [])
 
     // const [posts, setPosts] = useState([]);
     // const [filter, setFilter] = useState({sort: "", query: ""});
@@ -75,11 +89,16 @@ function App() {
         //     }
         //     <Pagination page={page} changePage={changePage} totalPages={totalPages}/>
         // </div>
-        <BrowserRouter>
-            <Routes>
-                <Route path="/posts" element={<MyPosts/>}></Route>
-            </Routes>
-        </BrowserRouter>
+        <AuthContext.Provider value={{
+            isAuth,
+            setIsAuth,
+            isLoading
+        }}>
+            <BrowserRouter>
+                <Navbar/>
+                <AppRouter/>
+            </BrowserRouter>
+        </AuthContext.Provider>
     );
 }
 

@@ -1,5 +1,5 @@
-import React, {useEffect, useState} from "react";
-import "../hooks/App.css"
+import React, {useEffect, useRef, useState} from "react";
+import "../styles/App.css"
 import {useFetching} from "../hooks/useFetching";
 import PostService from "../API/PostService";
 import {usePosts} from "../hooks/usePosts";
@@ -11,6 +11,8 @@ import Pagination from "../components/UI/pagination/Pagination";
 import PostFilter from "../components/PostFilter";
 import PostForm from "../components/PostForm";
 import Loader from "../components/UI/Loader/Loader";
+import {useObserver} from "../hooks/useObserver";
+
 
 
 function MyPosts() {
@@ -18,9 +20,10 @@ function MyPosts() {
     const [posts, setPosts] = useState([]);
     const [filter, setFilter] = useState({sort: "", query: ""});
     const [modal, setModal] = useState(false);
-    const [totalPages, setTotalPages] = useState(0)
-    const [limit, setLimit] = useState(10)
-    const [page, setPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(0);
+    const [limit, setLimit] = useState(10);
+    const [page, setPage] = useState(1);
+    const lastElement = useRef();
 
     const sortedAndSearchedPosts = usePosts(posts, filter.sort, filter.query);
 
@@ -30,14 +33,18 @@ function MyPosts() {
         postError] =
         useFetching(async () => {
                 const response = await PostService.getAll(limit, page);
-                setPosts(response.data);
+                setPosts([...posts, ...response.data]);
                 const totalCount = response.headers["x-total-count"]
                 setTotalPages(getPageCount(totalCount, limit));
             }
         )
 
+    useObserver(lastElement, page < totalPages, isPostsLoading, () => {
+        setPage(page + 1);
+    })
+
     useEffect(() => {
-        fetchPosts()
+        fetchPosts(limit, page)
     }, [page])
 
     const createPost = (newPost) => {
@@ -58,7 +65,6 @@ function MyPosts() {
 
     const changePage = (page) => {
         setPage(page)
-        fetchPosts()
     }
 
     return (
@@ -78,10 +84,12 @@ function MyPosts() {
                 <h1>Произошла ошибка {postError}</h1>
             }
 
-            {isPostsLoading
-                ? <div style={{display: "flex", justifyContent: "center", marginTop: 50}}><Loader/></div>
-                : <PostList remove={removePost} posts={sortedAndSearchedPosts} title={"Список постов"}/>
+            <PostList remove={removePost} posts={sortedAndSearchedPosts} title={"Список постов"}/>
+            <div ref={lastElement} style={{height: 20, background: "red"}}></div>
+            {isPostsLoading &&
+                <div style={{display: "flex", justifyContent: "center", marginTop: 50}}><Loader/></div>
             }
+
             <Pagination page={page} changePage={changePage} totalPages={totalPages}/>
         </div>
     );
